@@ -6,13 +6,15 @@
 **Product usefulness as a focused MVP: PASS.**  
 **Product differentiation as a comprehensive world-data app: FAIL — and that should not be the positioning.**
 
-World Metrics has a credible reason to exist only if it is positioned as the **fastest low-friction global snapshot**, not as a replacement for World Bank, Our World in Data, or feature-rich country-statistics apps.
+World Metrics has a credible reason to exist only if it is positioned as a **fast, focused, low-friction global snapshot**, not as a replacement for World Bank, Our World in Data, or feature-rich country-statistics apps.
 
 ### Canonical product promise
 
-> **The fastest offline way to see where a country sits in the world across five headline indicators.**
+> **A fast offline way to see where a country sits in the world across five headline indicators.**
 
 A user should be able to open the app, find/tap a country, and understand its current global position within seconds without an account, without navigating a data portal, and without needing a network connection.
+
+This is a product-positioning hypothesis to validate in Internal Testing; it is not a claim that World Metrics has been benchmarked as faster than every competing product.
 
 ## Audited v1 capability
 
@@ -43,13 +45,13 @@ Most packaged values are from 2024–2025, but the app intentionally exposes old
 
 ## Why a user would use World Metrics
 
-### 1. It answers a narrow question faster than a data portal
+### 1. It answers a narrow question with less interaction than a general data portal
 
 The main job is not “research every statistic about a country.” It is:
 
 > **“Give me a quick sense of this country in global context.”**
 
-The user gets one visual surface, five metrics, the reporting year, and rank. That is materially less cognitive work than opening a general data portal, choosing an indicator, configuring a chart, selecting countries, and interpreting the result.
+The user gets one visual surface, five metrics, the reporting year, and rank. The product hypothesis is that this creates less cognitive and interaction overhead for a quick lookup than opening a general data portal, choosing an indicator, configuring a chart, selecting countries, and interpreting the result. Internal Testing must validate that hypothesis.
 
 ### 2. It works when connectivity is poor or unavailable
 
@@ -57,11 +59,11 @@ The core country table, map geometry, D3/TopoJSON runtime, and UI are packaged l
 
 ### 3. It gives spatial context immediately
 
-A number such as “GDP per capita = $X” is not very meaningful by itself. A choropleth plus world rank quickly answers whether a country is near the high, middle, or low end of the global distribution.
+A number such as “GDP per capita = $X” is not very meaningful by itself. A choropleth plus world rank quickly answers whether a country is near the high, middle, or low end of the global numeric distribution.
 
 ### 4. It deliberately limits scope
 
-Five metrics is a weakness for research, but it is a strength for a quick-reference product. The current metrics cover economic capacity, longevity, demographic scale, environmental intensity, and digital connectivity without presenting a large indicator catalog.
+Five metrics is a weakness for research, but it can be a strength for a quick-reference product. The current metrics cover economic capacity, longevity, demographic scale, environmental intensity, and digital connectivity without presenting a large indicator catalog.
 
 ### 5. It is low-friction
 
@@ -116,7 +118,7 @@ Reference: https://play.google.com/store/apps/details?id=ai.saifullah.al_ard
 
 ### Consequence
 
-World Metrics should **not** claim “all world data,” “the most complete country app,” or similar breadth-based positioning. It wins only if it remains faster, clearer and lighter for the single quick-context job.
+World Metrics should **not** claim “all world data,” “the most complete country app,” “the fastest country app,” or similar unsupported breadth/performance superlatives. It should compete on a deliberately small interaction surface for the quick-context job, then validate whether users value that in testing.
 
 ## Product gaps found in this audit
 
@@ -158,6 +160,7 @@ Repairs made in this audit:
 2. README now states the canonical narrow user promise and explicit non-goals.
 3. This product-value audit is now part of the product repository.
 4. Static audit is strengthened to prevent README/package version drift.
+5. Re-audit removed an unverified “fastest” competitive superlative from product positioning.
 
 The v1.0.3 binary remains the same signed release candidate. Product-feature changes should start from the next version after Internal Testing evidence is collected.
 
@@ -186,7 +189,7 @@ A production decision should be based on these task/retention answers, not only 
 
 **GO to Google Play Internal Testing with v1.0.3.**
 
-Do not yet market it as a comprehensive statistics platform. The correct v1 message is:
+Do not yet market it as a comprehensive statistics platform. A defensible v1 message is:
 
 > **World Metrics turns five headline country indicators into an instant, offline world view — search a country, see the map, value, year and global rank in seconds.**
 
