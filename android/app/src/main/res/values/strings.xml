@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">World Metrics</string>
+    <string name="title_activity_main">World Metrics</string>
+    <string name="package_name">app.worldmetrics.mobile</string>
+    <string name="custom_url_scheme">app.worldmetrics.mobile</string>
+</resources>
