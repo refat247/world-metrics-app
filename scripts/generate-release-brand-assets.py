@@ -32,10 +32,8 @@ def draw_mark(draw, box, stroke, include_bars=True):
     lw = max(2, int(w * 0.055))
     globe = [cx-r, cy-r, cx+r, cy+r]
     draw.ellipse(globe, outline=CYAN, width=lw)
-    # meridians
     draw.ellipse([cx-r*0.56, cy-r, cx+r*0.56, cy+r], outline=CYAN_SOFT, width=max(1, lw//2))
     draw.ellipse([cx-r*0.23, cy-r, cx+r*0.23, cy+r], outline=CYAN_SOFT, width=max(1, lw//2))
-    # latitudes
     draw.arc([cx-r, cy-r*0.55, cx+r, cy+r*0.55], 0, 180, fill=CYAN_SOFT, width=max(1, lw//2))
     draw.arc([cx-r, cy-r*0.55, cx+r, cy+r*0.55], 180, 360, fill=CYAN_SOFT, width=max(1, lw//2))
     if include_bars:
@@ -96,7 +94,6 @@ def save_png(im, path):
     path.parent.mkdir(parents=True, exist_ok=True)
     im.save(path, format='PNG', optimize=True)
 
-# Launcher density assets.
 scales = {'mdpi':1.0,'hdpi':1.5,'xhdpi':2.0,'xxhdpi':3.0,'xxxhdpi':4.0}
 for name, scale in scales.items():
     out = RES / f'mipmap-{name}'
@@ -104,7 +101,6 @@ for name, scale in scales.items():
     save_png(launcher(round(48*scale), True), out/'ic_launcher_round.png')
     save_png(foreground(round(108*scale)), out/'ic_launcher_foreground.png')
 
-# Splash density assets.
 for name, scale in scales.items():
     pw, ph = round(320*scale), round(480*scale)
     lw, lh = ph, pw
@@ -112,15 +108,12 @@ for name, scale in scales.items():
     save_png(splash(lw,lh), RES/f'drawable-land-{name}'/'splash.png')
 save_png(splash(640,960), RES/'drawable'/'splash.png')
 
-# Store listing icon source (public, non-secret).
 store = ROOT/'artifacts/store'
 store.mkdir(parents=True, exist_ok=True)
 save_png(launcher(512, False), store/'google-play-icon-512.png')
 
-# Dark adaptive-icon background.
 (RES/'values/ic_launcher_background.xml').write_text('''<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <color name="ic_launcher_background">#0B1118</color>\n</resources>\n''', encoding='utf-8')
 
-# Version bump for branded release candidate.
 for p in [ROOT/'package.json', ROOT/'package-lock.json']:
     data=json.loads(p.read_text(encoding='utf-8'))
     data['version']='1.0.3'
@@ -142,9 +135,5 @@ t=re.sub(r'(?m)^\s*versionCode\s+3\s*$', '        versionCode 4', t, count=1)
 t=re.sub(r'(?m)^\s*versionName\s+"1\.0\.2"\s*$', '        versionName "1.0.3"', t, count=1)
 bg.write_text(t,encoding='utf-8')
 
-# Advance static version assertions without weakening any other audit.
-audit=ROOT/'scripts/static-audit.mjs'
-t=audit.read_text(encoding='utf-8').replace('data-app-version=\\"1.0.2\\"','data-app-version=\\"1.0.3\\"')
-audit.write_text(t,encoding='utf-8')
-
+# static-audit.mjs derives the expected app version from package.json.
 print('World Metrics release branding generated; version=1.0.3 code=4')
