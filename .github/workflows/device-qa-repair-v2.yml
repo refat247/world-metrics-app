@@ -1,0 +1,88 @@
+name: Device QA Repair Gate v2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/device-qa-repair-v2.py'
+      - '.github/workflows/device-qa-repair-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair-build-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Apply deterministic Device QA Repair v2
+        run: python scripts/device-qa-repair-v2.py
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run strengthened production audit
+        run: npm run audit
+
+      - name: Verify v2 repair markers
+        shell: bash
+        run: |
+          grep -q 'data-app-version="1.0.2"' www/index.html
+          grep -q 'grid-template-columns: repeat(5, minmax(0, 1fr))' www/index.html
+          grep -q 'id="orientation-toggle"' www/index.html
+          grep -q 'flatFitObject' www/index.html
+          grep -q 'WorldMetricsNativeBridge' android/app/src/main/java/app/worldmetrics/mobile/MainActivity.java
+          grep -q 'SCREEN_ORIENTATION_LANDSCAPE' android/app/src/main/java/app/worldmetrics/mobile/MainActivity.java
+          grep -q 'versionCode 3' android/app/build.gradle
+          grep -q 'versionName "1.0.2"' android/app/build.gradle
+
+      - name: Sync canonical Android project
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          test -s android/app/build/outputs/apk/debug/app-debug.apk
+          sha256sum android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload repaired debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-metrics-v1.0.2-device-qa-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Commit repaired canonical source
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add www/index.html www/service-worker.js package.json package-lock.json scripts/static-audit.mjs
+          git add android/app/build.gradle android/app/src/main/java/app/worldmetrics/mobile/MainActivity.java
+          if git diff --cached --quiet; then
+            echo 'No repair delta to commit.'
+          else
+            git commit -m 'Apply Device QA Repair v2'
+            git push origin HEAD:main
+          fi
