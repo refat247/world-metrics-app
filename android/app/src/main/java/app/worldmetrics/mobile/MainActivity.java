@@ -7,6 +7,7 @@ import androidx.activity.OnBackPressedCallback;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
+    // Device QA v1: native Back delegates to the web UI state before allowing root exit.
     private OnBackPressedCallback worldMetricsBackCallback;
 
     @Override
