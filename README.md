@@ -31,11 +31,15 @@ Open `http://localhost:4173`.
 
 ## Android
 
-On Windows, double-click `SETUP_ANDROID_WINDOWS.bat` after installing Node.js 22+ and Android Studio. The script installs the pinned Capacitor dependencies, creates the native Android project, syncs the web assets, and opens Android Studio.
+Android Build Gate v1 has passed in GitHub Actions. The generated `android/` project and `package-lock.json` are now version-controlled production source.
+
+On Windows, after installing Node.js 22+ and Android Studio, double-click `SETUP_ANDROID_WINDOWS.bat`. It uses `npm ci`, synchronizes the canonical web assets into the committed Android project, and opens Android Studio. If `android/` is ever missing, the script can regenerate it as a recovery path.
+
+The CI workflow `.github/workflows/android-debug-build.yml` builds and verifies a debug APK and publishes it as the `world-metrics-debug-apk` artifact.
 
 ## iOS
 
-Requires macOS + Xcode. Run `SETUP_IOS_MAC.command`.
+Requires macOS + Xcode. Run `SETUP_IOS_MAC.command` when the iOS gate begins.
 
 ## Design rule
 
