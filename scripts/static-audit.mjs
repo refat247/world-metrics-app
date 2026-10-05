@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 const html = fs.readFileSync(new URL('../www/index.html', import.meta.url), 'utf8');
 const manifest = JSON.parse(fs.readFileSync(new URL('../www/manifest.webmanifest', import.meta.url), 'utf8'));
+const mainActivity = fs.readFileSync(new URL('../android/app/src/main/java/app/worldmetrics/mobile/MainActivity.java', import.meta.url), 'utf8');
 const checks = [
   ['doctype', html.startsWith('<!DOCTYPE html>')],
   ['manifest linked', html.includes('rel="manifest" href="manifest.webmanifest"')],
@@ -13,7 +14,14 @@ const checks = [
   ['viewport safe-area support', html.includes('viewport-fit=cover') && html.includes('safe-area-inset-top')],
   ['preferences persistence', html.includes('world-metrics.preferences.v1')],
   ['manifest standalone', manifest.display === 'standalone'],
-  ['manifest icons', Array.isArray(manifest.icons) && manifest.icons.length >= 3]
+  ['manifest icons', Array.isArray(manifest.icons) && manifest.icons.length >= 3],
+  ['native back bridge', mainActivity.includes('OnBackPressedCallback') && mainActivity.includes('__worldMetricsHandleBack')],
+  ['web back priority handler', html.includes('window.__worldMetricsHandleBack') && html.includes('Press back again to exit')],
+  ['search selection dismisses keyboard', html.includes('queryEl.blur()')],
+  ['pinch zoom uses preview transform', html.includes('setGlobePreviewScale') && html.includes('pinchTargetScale')],
+  ['globe redraws coalesced', html.includes('scheduleGlobePaint') && html.includes('globePaintRaf')],
+  ['active metric auto-scrolls on mobile', html.includes('ensureMetricVisible') && html.includes('scrollIntoView')],
+  ['device repair version', html.includes('data-app-version=\"1.0.1\"')]
 ];
 let failed = 0;
 for (const [name, pass] of checks) { console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}`); if (!pass) failed++; }

@@ -106,6 +106,8 @@ button { cursor: pointer; }
   max-width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
 }
 
 .metric-switcher::-webkit-scrollbar {
@@ -664,10 +666,40 @@ svg.map.grabbing .country {
     order: 5;
   }
 
+  .metric-switcher {
+    scroll-snap-type: x proximity;
+  }
+
   .metric-btn,
   .mode-btn {
     min-height: 44px;
     padding: 8px 12px;
+  }
+
+  .metric-btn {
+    flex: 0 0 auto;
+    scroll-snap-align: center;
+  }
+
+  .legend {
+    left: 8px;
+    top: 8px;
+    width: min(188px, 50vw);
+    padding: 8px 10px;
+  }
+
+  .legend-title {
+    margin: 2px 0 5px;
+    font-size: 12px;
+  }
+
+  .legend-note {
+    display: none;
+  }
+
+  .key-row {
+    margin-top: 5px;
+    font-size: 9px;
   }
 
   .side-panel,
@@ -678,11 +710,12 @@ svg.map.grabbing .country {
     right: 0;
     bottom: 0;
     width: 100%;
-    height: min(40vh, 340px);
+    height: min(44dvh, 360px);
+    max-height: calc(100% - 116px);
     border-left-width: 0;
     border-top: 1px solid var(--color-line);
     transform: translateY(100%);
-    transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .panel-open .side-panel {
@@ -693,10 +726,39 @@ svg.map.grabbing .country {
     width: 100%;
   }
 
-  .panel-open .zoom-controls,
-  .panel-open .reset-view {
-    bottom: calc(min(40vh, 340px) + 10px);
+  .panel-open .zoom-controls {
+    bottom: calc(min(44dvh, 360px) + 10px);
   }
+
+  .panel-open .reset-view {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+
+.back-toast {
+  position: fixed;
+  z-index: 100;
+  left: 50%;
+  bottom: max(22px, calc(env(safe-area-inset-bottom) + 14px));
+  transform: translate(-50%, 12px);
+  padding: 9px 13px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: rgba(18, 24, 31, 0.96);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.back-toast.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -709,7 +771,7 @@ svg.map.grabbing .country {
 </style>
 </head>
 <body>
-<div class="app" id="app" data-app-version="1.0.0">
+<div class="app" id="app" data-app-version="1.0.1">
   <header class="header">
     <div class="brand">
       <span class="mark">GEO/01</span>
@@ -970,8 +1032,11 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
   let pausedUntil = 0;
   let lastSpin = 0;
   let raf = 0;
+  let globePaintRaf = 0;
   let lastWidth = 0;
   let focusTimer = 0;
+  let lastRootBack = 0;
+  let backToastTimer = 0;
 
   const sphere = sphereG.append("path").datum({ type: "Sphere" }).attr("class", "sphere");
   sphereG.append("path").datum(graticule).attr("class", "graticule hidden");
@@ -1036,6 +1101,24 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     sphereG.select(".graticule").attr("d", globePath(graticule));
     d3.select(clipPath).attr("d", globePath({ type: "Sphere" }));
   }
+  function scheduleGlobePaint() {
+    if (globePaintRaf) return;
+    globePaintRaf = requestAnimationFrame(() => {
+      globePaintRaf = 0;
+      paintGlobe();
+    });
+  }
+  function setGlobePreviewScale(ratio) {
+    const cx = width / 2;
+    const cy = centerY();
+    const transform = `translate(${cx} ${cy}) scale(${ratio}) translate(${-cx} ${-cy})`;
+    zoomRoot.attr("transform", transform);
+    d3.select(clipPath).attr("transform", transform);
+  }
+  function clearGlobePreviewScale() {
+    zoomRoot.attr("transform", null);
+    d3.select(clipPath).attr("transform", null);
+  }
   function setReadout(text) {
     scaleReadout.textContent = text;
   }
@@ -1047,6 +1130,9 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
       ],
       { type: "Sphere" },
     );
+    if (isMobile() && height > width) {
+      projection.scale(projection.scale() * 1.12).translate([width / 2, height * 0.44]);
+    }
     zoomBehavior.extent([
       [0, 0],
       [width, height],
@@ -1135,7 +1221,7 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
       const sensitivity = 75 / globeProjection.scale();
       const rotation = globeProjection.rotate();
       globeRotation = [rotation[0] + event.dx * sensitivity, Math.max(-90, Math.min(90, rotation[1] - event.dy * sensitivity))];
-      paintGlobe();
+      scheduleGlobePaint();
     })
     .on("end", () => {
       svg.classList.remove("grabbing");
@@ -1154,10 +1240,12 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     pauseSpin(6000);
     const factor = event.deltaY < 0 ? 1.08 : 0.93;
     globeScale0 = Math.max(0.8, Math.min(8, globeScale0 * factor));
-    paintGlobe();
+    scheduleGlobePaint();
     setReadout(Math.round(globeScale0 * 100) + "%");
   }
-  let pinchDistance = 0;
+  let pinchStartDistance = 0;
+  let pinchStartScale = 1;
+  let pinchTargetScale = 1;
   function touchDistance(touches) {
     const a = touches[0];
     const b = touches[1];
@@ -1165,23 +1253,35 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
   }
   function onTouchStart(event) {
-    if (event.touches.length === 2) pinchDistance = touchDistance(event.touches);
+    if (mode !== "globe" || event.touches.length !== 2) return;
+    pinchStartDistance = touchDistance(event.touches);
+    pinchStartScale = globeScale0;
+    pinchTargetScale = globeScale0;
+    pauseSpin(6000);
   }
   function onTouchMove(event) {
-    if (mode !== "globe" || event.touches.length !== 2) return;
+    if (mode !== "globe" || event.touches.length !== 2 || pinchStartDistance <= 0) return;
     event.preventDefault();
     const next = touchDistance(event.touches);
-    if (pinchDistance > 0 && next > 0) {
-      globeScale0 = Math.max(0.8, Math.min(8, globeScale0 * (next / pinchDistance)));
-      paintGlobe();
-      setReadout(Math.round(globeScale0 * 100) + "%");
-      pauseSpin(6000);
-    }
-    pinchDistance = next;
+    if (next <= 0) return;
+    pinchTargetScale = Math.max(0.8, Math.min(8, pinchStartScale * (next / pinchStartDistance)));
+    setGlobePreviewScale(pinchTargetScale / pinchStartScale);
+    setReadout(Math.round(pinchTargetScale * 100) + "%");
+  }
+  function onTouchEnd(event) {
+    if (mode !== "globe" || pinchStartDistance <= 0 || event.touches.length >= 2) return;
+    globeScale0 = pinchTargetScale;
+    pinchStartDistance = 0;
+    clearGlobePreviewScale();
+    paintGlobe();
+    setReadout(Math.round(globeScale0 * 100) + "%");
+    pauseSpin(6000);
   }
   svg.addEventListener("wheel", onWheel, { passive: false });
   svg.addEventListener("touchstart", onTouchStart, { passive: true });
   svg.addEventListener("touchmove", onTouchMove, { passive: false });
+  svg.addEventListener("touchend", onTouchEnd, { passive: true });
+  svg.addEventListener("touchcancel", onTouchEnd, { passive: true });
 
   function largest(iso) {
     return features.filter((item) => item.properties.iso_a3 === iso).sort((a, b) => d3.geoArea(b) - d3.geoArea(a))[0];
@@ -1243,7 +1343,7 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     const dt = Math.min(0.05, (now - lastSpin) / 1000);
     lastSpin = now;
     globeRotation = [globeRotation[0] + dt * 6, globeRotation[1]];
-    paintGlobe();
+    scheduleGlobePaint();
   }
   function syncSize() {
     const nextW = wrap.clientWidth;
@@ -1272,6 +1372,8 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
   }
   function setMode(next) {
     if (next === mode) return;
+    clearGlobePreviewScale();
+    pinchStartDistance = 0;
     mode = next;
     savePreference("mode", next);
     svg.classList.toggle("globe", next === "globe");
@@ -1336,7 +1438,9 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     labels[1].textContent = meta.legend(info.quantiles[1] == null ? info.min : info.quantiles[1]);
     labels[2].textContent = meta.legend(info.max);
     metricHost.querySelectorAll(".metric-btn").forEach((button) => {
-      button.setAttribute("aria-checked", button.getAttribute("data-metric") === metric ? "true" : "false");
+      const active = button.getAttribute("data-metric") === metric;
+      button.setAttribute("aria-checked", active ? "true" : "false");
+      if (active) requestAnimationFrame(() => ensureMetricVisible(button));
     });
   }
   function renderTooltip(iso, name) {
@@ -1380,6 +1484,44 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     hint.textContent = "Select for the full profile";
     tooltip.appendChild(hint);
   }
+  function ensureMetricVisible(button) {
+    if (!button || !isMobile()) return;
+    button.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "nearest", inline: "center" });
+  }
+  function showBackToast() {
+    let toast = document.getElementById("back-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "back-toast";
+      toast.className = "back-toast";
+      toast.setAttribute("role", "status");
+      toast.textContent = "Press back again to exit";
+      document.body.appendChild(toast);
+    }
+    toast.classList.add("visible");
+    window.clearTimeout(backToastTimer);
+    backToastTimer = window.setTimeout(() => toast.classList.remove("visible"), 1600);
+  }
+  window.__worldMetricsHandleBack = function () {
+    if (document.activeElement === queryEl || searchOpen) {
+      searchOpen = false;
+      query = "";
+      queryEl.value = "";
+      queryEl.blur();
+      renderResults();
+      return true;
+    }
+    if (selected) {
+      chooseSelection(null, false);
+      return true;
+    }
+    const now = Date.now();
+    if (now - lastRootBack < 1800) return false;
+    lastRootBack = now;
+    showBackToast();
+    return true;
+  };
+
   function renderPanel() {
     panel.replaceChildren();
     if (!selected) return;
@@ -1500,7 +1642,8 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     queryEl.value = "";
     searchOpen = false;
     renderResults();
-    chooseSelection({ iso: entry.iso, name: entry.name }, true);
+    queryEl.blur();
+    requestAnimationFrame(() => chooseSelection({ iso: entry.iso, name: entry.name }, true));
   }
   function chooseSelection(selection, reveal) {
     selected = selection;
@@ -1524,6 +1667,7 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
       renderLegend();
       paintFills(true);
       renderPanel();
+      ensureMetricVisible(button);
     });
     metricHost.appendChild(button);
   });
@@ -1563,9 +1707,7 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
   document.getElementById("reset").addEventListener("click", resetView);
   window.addEventListener("keydown", (event) => {
     if (event.key !== "Escape") return;
-    searchOpen = false;
-    renderResults();
-    chooseSelection(null, false);
+    window.__worldMetricsHandleBack();
   });
   document.getElementById("count").textContent = String(Object.keys(COUNTRIES).length);
 
