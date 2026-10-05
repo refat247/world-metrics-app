@@ -1,40 +1,51 @@
-# Release Audit — World Metrics App v1.0.0
+# Release Audit — World Metrics App v1.0.2
 
 ## Provenance
 
 - Grok baseline commit: `9bad10f022e2d07ffdf036d33ddf1b0e37fbe7ed`
-- Expected source HTML Git blob: `79487b79286ce7c8dbae0685db33ddaefffdeaee`
-- Bootstrap refuses to continue if the downloaded pinned source does not match that blob.
+- Preserved source HTML Git blob: `79487b79286ce7c8dbae0685db33ddaefffdeaee`
+- The production lineage preserves that original artifact byte-for-byte while the active app is repaired independently.
 
 ## Product checks
 
-`npm run audit` validates 12 static/PWA invariants plus the byte-level lineage invariant.
+`npm run audit` now validates the original static/PWA invariants, Grok lineage, Android Back bridge, keyboard dismissal, globe gesture optimization, mobile metric containment, orientation control, safe Flat-map geometry fitting, and the current app version.
 
 ## Android Build Gate v1 — PASS / CLOSED
 
-The Android gate completed through an audit → repair → re-audit loop on 2026-10-05.
+The original Android gate completed through generation, reproducibility, and repository-hygiene re-audit. The canonical Android project remains version-controlled while generated Capacitor/Gradle outputs stay ignored.
 
-### Gate run 1 — native generation and first APK
+## Physical Device QA — repair history
 
-GitHub Actions run `37260108235` passed dependency setup, static/lineage audit, Capacitor Android generation/sync, Gradle `assembleDebug`, APK verification, artifact upload, and promotion of the native project plus dependency lock.
+### Device QA Repair v1 — v1.0.1 / versionCode 2
 
-### Gate run 2 — reproducibility
+Physical-device recording identified Android Back exiting from country details, laggy globe pinch rendering, keyboard persistence after country selection, clipped metric navigation, oversized/colliding overlays, and mobile viewport transition defects.
 
-GitHub Actions run `37260402737` rebuilt successfully using the committed `package-lock.json` with `npm ci` and the committed Android project. This confirmed that the native build was reproducible from repository state.
+Repair v1 introduced native Back delegation, root double-Back protection, lightweight pinch-preview scaling with one full reprojection at gesture end, requestAnimationFrame globe-paint coalescing, search blur, active-metric visibility, compact mobile overlays, and bottom-sheet viewport repairs. A follow-up physical recording confirmed the major Back, keyboard, metric-navigation and overlay fixes.
 
-The re-audit detected repository-hygiene drift from the initial forced native promotion: files that Capacitor's generated `android/.gitignore` classifies as generated were being tracked. The generated Cordova-plugin module, copied web assets, generated Capacitor config/plugin JSON, generated `config.xml`, and build intermediates were removed from Git.
+### Device QA Repair v2 — v1.0.2 / versionCode 3
 
-### Gate run 3 — clean canonical Android source
+Residual physical-device evidence showed three remaining presentation/navigation defects:
 
-GitHub Actions run `37260664539` passed after that cleanup. Capacitor regenerated the ignored files for the build, Gradle compiled the debug APK, the APK was verified/uploaded, and the workflow produced no follow-up native-source commit. This confirms the canonical Git tree stays clean while remaining fully buildable.
+1. The right-most metric option could extend beyond the portrait viewport.
+2. There was no explicit in-app Portrait ↔ Landscape control.
+3. Flat mode was visually undersized while the prior arbitrary mobile scale multiplier could push country geometry beyond horizontal bounds.
 
-Final Build Gate v1 artifact:
+Repair v2 changed the mobile metric selector to a contained five-column grid, added a native Android orientation bridge plus an in-app orientation toggle, and changed Flat-mode fitting to use the actual country FeatureCollection with a safe inset rather than an arbitrary Sphere scale multiplier.
 
-- Artifact name: `world-metrics-debug-apk`
-- Artifact ID: `11324885797`
+Local browser preflight before native build:
+
+- `390×844` portrait: 241 country paths rendered; all five metric buttons remained within the viewport; rendered country x-bounds were `6–384` inside a `390 px` viewport; visible country width was about `96.9%` of the map width; orientation control target displayed `Landscape`.
+- `844×390` landscape: 241 country paths rendered; all five metric buttons remained contained; orientation control target displayed `Portrait`.
+
+GitHub Actions Device QA Repair Gate v2 run `37268521160` completed successfully after one audit-marker repair loop. It passed deterministic repair application, locked dependency installation, strengthened production audit, explicit v2 marker verification, Capacitor Android sync, Gradle `assembleDebug`, APK verification, artifact upload, and canonical source promotion.
+
+Final v1.0.2 debug artifact:
+
+- Artifact name: `world-metrics-v1.0.2-device-qa-apk`
+- Artifact ID: `11326869535`
 - Artifact retention: 30 days from 2026-10-05
-- APK size: `4,556,938` bytes
-- APK SHA-256: `cb22b01b0ef3d9729c2c39be218234b9a85811fa328202843a4aab7031882d7b`
+- APK size: `4,561,142` bytes
+- APK SHA-256: `c3e71f7db671c08a7c1d85bfa9f48fbe0cf088705a9667d2aadaaee361c38e25`
 
 ## Android baseline
 
@@ -44,14 +55,12 @@ Final Build Gate v1 artifact:
 - `compileSdkVersion`: `36`
 - `targetSdkVersion`: `36`
 - Application ID: `app.worldmetrics.mobile`
+- App version: `1.0.2`
+- Android versionCode: `3`
 - Dependency installation: lockfile-first via `npm ci`
 - Native project: `android/` is version-controlled production source
 - Generated sync/build outputs: ignored and regenerated by Capacitor/Gradle
 
-## Native-source policy after Build Gate v1
+## Current validation boundary
 
-Real Android source, Gradle wrapper/configuration, manifest, resources, and app code are canonical in Git. Generated build outputs, Capacitor-copied web assets, generated plugin/config files, Gradle caches, keystores, and signing material are excluded. The iOS project remains outside this Android gate and will be handled separately on macOS/Xcode.
-
-## Remaining validation boundary
-
-CI now establishes source integrity, provenance, reproducible Android synchronization, and successful APK compilation. It does not establish physical-device behavior. The next gate is installation of the debug APK on a real Android device followed by functional, touch/rotation, persistence, Android-back, and offline QA.
+Compilation, provenance, static regression checks, portrait/landscape browser layout containment, and APK generation are established. The remaining gate is physical-device verification of v1.0.2, specifically: all five metric tabs visible in portrait, in-app orientation toggle working both directions, Flat map enlarged without clipping/overflow, previously repaired Back behavior remaining intact, and offline cold launch. Play Store signing/release must wait until that device gate passes.
