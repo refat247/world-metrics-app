@@ -1,0 +1,25 @@
+{
+  "name": "world-metrics-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline-first World Metrics PWA and Capacitor Android/iOS app",
+  "scripts": {
+    "serve": "python -m http.server 4173 --directory www",
+    "cap:add:android": "npx cap add android",
+    "cap:add:ios": "npx cap add ios",
+    "cap:sync": "npx cap sync",
+    "cap:open:android": "npx cap open android",
+    "cap:open:ios": "npx cap open ios",
+    "android:debug": "cd android && ./gradlew assembleDebug",
+    "android:bundle": "cd android && ./gradlew bundleRelease",
+    "audit:static": "node scripts/static-audit.mjs",
+    "audit:lineage": "node scripts/verify-lineage.mjs",
+    "audit": "npm run audit:static && npm run audit:lineage"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2"
+  },
+  "devDependencies": { "@capacitor/cli": "8.5.2" }
+}

@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+const EXPECTED = '79487b79286ce7c8dbae0685db33ddaefffdeaee';
+const path = new URL('../artifacts/original/world-metrics.html', import.meta.url);
+const body = fs.readFileSync(path);
+const header = Buffer.from(`blob ${body.length}\0`, 'utf8');
+const actual = crypto.createHash('sha1').update(header).update(body).digest('hex');
+console.log(`Expected Grok canonical HTML blob: ${EXPECTED}`);
+console.log(`Production provenance HTML blob:     ${actual}`);
+if (actual !== EXPECTED) process.exit(1);
+console.log('PASS  provenance HTML is byte-identical to the Grok canonical source');

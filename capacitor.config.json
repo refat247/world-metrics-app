@@ -1,0 +1,7 @@
+{
+  "appId": "app.worldmetrics.mobile",
+  "appName": "World Metrics",
+  "webDir": "www",
+  "backgroundColor": "#0d1117",
+  "android": { "allowMixedContent": false, "backgroundColor": "#0d1117" }
+}
