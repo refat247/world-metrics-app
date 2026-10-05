@@ -1,6 +1,6 @@
 {
   "name": "world-metrics-app",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "description": "Offline-first World Metrics PWA and Capacitor Android/iOS app",
   "scripts": {

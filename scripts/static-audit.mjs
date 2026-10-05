@@ -21,7 +21,11 @@ const checks = [
   ['pinch zoom uses preview transform', html.includes('setGlobePreviewScale') && html.includes('pinchTargetScale')],
   ['globe redraws coalesced', html.includes('scheduleGlobePaint') && html.includes('globePaintRaf')],
   ['active metric auto-scrolls on mobile', html.includes('ensureMetricVisible') && html.includes('scrollIntoView')],
-  ['device repair version', html.includes('data-app-version=\"1.0.1\"')]
+  ['metric row contained on mobile', html.includes('grid-template-columns: repeat(5, minmax(0, 1fr))')],
+  ['orientation toggle', html.includes('orientation-toggle') && mainActivity.includes('WorldMetricsNativeBridge') && mainActivity.includes('SCREEN_ORIENTATION_LANDSCAPE')],
+  ['flat map safe geometry fit', html.includes('flatFitObject') && html.includes('projection.fitExtent')],
+  ['device repair version 1.0.2', html.includes('data-app-version="1.0.2"')],
+  ['device repair version', html.includes('data-app-version=\"1.0.2\"')]
 ];
 let failed = 0;
 for (const [name, pass] of checks) { console.log(`${pass ? 'PASS' : 'FAIL'}  ${name}`); if (!pass) failed++; }

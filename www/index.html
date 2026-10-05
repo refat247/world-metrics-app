@@ -159,6 +159,27 @@ button { cursor: pointer; }
   font-weight: 600;
 }
 
+.orientation-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface-2);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.orientation-btn:hover {
+  color: var(--color-fg);
+  background: #1b2530;
+}
+
 .save-file {
   display: inline-flex;
   align-items: center;
@@ -667,7 +688,13 @@ svg.map.grabbing .country {
   }
 
   .metric-switcher {
-    scroll-snap-type: x proximity;
+    width: 100%;
+    min-width: 0;
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    overflow: hidden;
+    scroll-snap-type: none;
   }
 
   .metric-btn,
@@ -677,8 +704,20 @@ svg.map.grabbing .country {
   }
 
   .metric-btn {
-    flex: 0 0 auto;
-    scroll-snap-align: center;
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    padding-left: 3px;
+    padding-right: 3px;
+    font-size: clamp(9px, 2.55vw, 11px);
+    letter-spacing: 0;
+    overflow: hidden;
+    text-overflow: clip;
+    scroll-snap-align: none;
+  }
+
+  .orientation-btn {
+    min-height: 44px;
   }
 
   .legend {
@@ -771,7 +810,7 @@ svg.map.grabbing .country {
 </style>
 </head>
 <body>
-<div class="app" id="app" data-app-version="1.0.1">
+<div class="app" id="app" data-app-version="1.0.2">
   <header class="header">
     <div class="brand">
       <span class="mark">GEO/01</span>
@@ -783,6 +822,9 @@ svg.map.grabbing .country {
       <button type="button" class="mode-btn" data-mode="flat" role="radio" aria-checked="true">Flat</button>
       <button type="button" class="mode-btn" data-mode="globe" role="radio" aria-checked="false" title="Drag to rotate. The globe turns slowly until you grab it.">Globe</button>
     </div>
+    <button type="button" class="orientation-btn" id="orientation-toggle" aria-label="Switch to landscape orientation" title="Switch portrait / landscape">
+      <span aria-hidden="true">↻</span><span id="orientation-label">Landscape</span>
+    </button>
     <form class="search" id="search" role="search">
       <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
       <input id="query" aria-label="Find a country" placeholder="Find a country" autocomplete="off">
@@ -991,6 +1033,8 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
   const metricHost = document.getElementById("metrics");
   const resultsEl = document.getElementById("results");
   const queryEl = document.getElementById("query");
+  const orientationBtn = document.getElementById("orientation-toggle");
+  const orientationLabel = document.getElementById("orientation-label");
 
   const PREF_KEY = "world-metrics.preferences.v1";
   function readPreferences() {
@@ -1122,16 +1166,28 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
   function setReadout(text) {
     scaleReadout.textContent = text;
   }
+  const flatFitObject = { type: "FeatureCollection", features: features };
   function fitFlat() {
+    const inset = isMobile() ? 6 : 8;
     projection.fitExtent(
       [
-        [8, 8],
-        [Math.max(16, width - 8), Math.max(16, height - 8)],
+        [inset, inset],
+        [Math.max(inset + 1, width - inset), Math.max(inset + 1, height - inset)],
       ],
-      { type: "Sphere" },
+      flatFitObject,
     );
     if (isMobile() && height > width) {
-      projection.scale(projection.scale() * 1.12).translate([width / 2, height * 0.44]);
+      const bounds = flatPath.bounds(flatFitObject);
+      const currentCenterY = (bounds[0][1] + bounds[1][1]) / 2;
+      const mapHeight = Math.max(1, bounds[1][1] - bounds[0][1]);
+      const safeTop = 12;
+      const safeBottom = height - 12;
+      const desiredCenterY = Math.min(
+        safeBottom - mapHeight / 2,
+        Math.max(safeTop + mapHeight / 2, height * 0.43),
+      );
+      const translate = projection.translate();
+      projection.translate([translate[0], translate[1] + desiredCenterY - currentCenterY]);
     }
     zoomBehavior.extent([
       [0, 0],
@@ -1488,6 +1544,27 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     if (!button || !isMobile()) return;
     button.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "nearest", inline: "center" });
   }
+  function currentOrientation() {
+    return window.innerWidth > window.innerHeight ? "landscape" : "portrait";
+  }
+  function updateOrientationControl() {
+    if (!orientationBtn || !orientationLabel) return;
+    const target = currentOrientation() === "portrait" ? "landscape" : "portrait";
+    orientationLabel.textContent = target === "landscape" ? "Landscape" : "Portrait";
+    orientationBtn.setAttribute("aria-label", `Switch to ${target} orientation`);
+  }
+  async function toggleOrientation() {
+    const target = currentOrientation() === "portrait" ? "landscape" : "portrait";
+    if (window.WorldMetricsNative && typeof window.WorldMetricsNative.setOrientation === "function") {
+      window.WorldMetricsNative.setOrientation(target);
+      return;
+    }
+    try {
+      if (screen.orientation && typeof screen.orientation.lock === "function") {
+        await screen.orientation.lock(target);
+      }
+    } catch (_) {}
+  }
   function showBackToast() {
     let toast = document.getElementById("back-toast");
     if (!toast) {
@@ -1653,6 +1730,10 @@ const WORLD = {"type":"Topology","objects":{"countries":{"type":"GeometryCollect
     renderPanel();
     if (selection && selection.iso && reveal) focus(selection.iso);
   }
+
+  if (orientationBtn) orientationBtn.addEventListener("click", toggleOrientation);
+  window.addEventListener("resize", updateOrientationControl, { passive: true });
+  updateOrientationControl();
 
   METRIC_KEYS.forEach((key) => {
     const button = document.createElement("button");
