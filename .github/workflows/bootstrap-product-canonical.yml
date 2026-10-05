@@ -23,6 +23,11 @@ jobs:
       - name: Materialize from pinned Grok canonical
         run: python scripts/bootstrap_from_grok.py
 
+      - name: Keep workflow files unchanged for the bootstrap push
+        run: |
+          git restore --source=HEAD -- .github/workflows/bootstrap-product-canonical.yml
+          rm -f .github/workflows/ci.yml
+
       - name: Audit generated product tree
         run: npm run audit
 
